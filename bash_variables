@@ -1,0 +1,4 @@
+git_get_branch="git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'"
+git_get_count_modified="git status 2> /dev/null | grep "modified:" | grep -v untracked | wc -l"
+git_get_count_new="git status 2> /dev/null | grep "new file" | wc -l"
+git_get_count_deleted="git status 2> /dev/null | grep "deleted" | wc -l"
