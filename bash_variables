@@ -1,4 +1,4 @@
-git_get_branch="git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'"
-git_get_count_modified="git status 2> /dev/null | grep "modified:" | grep -v untracked | wc -l"
-git_get_count_new="git status 2> /dev/null | grep "new file" | wc -l"
-git_get_count_deleted="git status 2> /dev/null | grep "deleted" | wc -l"
+v_ps1_line_prefix=('\xe2\x94\x8c\xe2\x94\x80' '\xe2\x94\x82\xe2' '\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x95\xbc\x20')
+v_ps1_symbols=('\xe2\x86\x92' '\xe2\x9d\x8d' '\xe2\x9c\xb7' '\xe2\x9c\x9d')
+v_ps1_format_color=('$GREEN%s' '$white%s' '$blue%s' '$cyan%' '$yellow%s')
+v_ps1_format_symbol_git=('%s ${ps1_symbols[0]}' '${ps1_symbols[1]}%s' '${ps1_symbols[2]}%s' '${ps1_symbols[3]}%s')

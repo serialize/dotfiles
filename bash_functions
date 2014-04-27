@@ -1,5 +1,9 @@
 #!/bin/bash
 
+source bash_colors
+source bash_variables
+source bash_commands
+
 function psgrep () {
   ps aux | grep "$1" | grep -v "grep"
 }
@@ -8,6 +12,7 @@ function mkcd () {
   mkdir -p "$1"
   cd "$1"
 }
+
 
 git_parse_branch() {
    local branch=$(git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
@@ -21,8 +26,106 @@ git_parse_branch() {
       unset git
    fi
 }
+_ps1_format_sys() {
+   echo -en $white
+   echo -en "\u@\h:"
+   echo -en $blue
+   echo -en "\w"
+   echo -en $NC
+}
+_ps1_format_git() {
+   local name=$cmd_git_get_branch #$(git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
+   if [ "$name" ]; then
+      local mod=$cmd_git_get_count_mod #$(git status 2> /dev/null | grep "modified:" | grep -v untracked | wc -l)
+      local new=$cmd_git_get_count_new #$(git status 2> /dev/null | grep "new file" | wc -l)
+      local del=$cmd_git_get_count_del #$(git status 2> /dev/null | grep "deleted" | wc -l)
+      
+      echo -en $cyan
+      echo -en "$name "   #\xe2\x86\x92 "
 
+      echo -en $yellow
+      echo -en "\xe2\x9d\x8d$mod "
+      echo -en "\xe2\x9c\xb7$new "
+      echo -en "\xe2\x9c\x9d$del"
+      
+      echo -en $NC
+   fi
+}
+_ps1_format_git_2() {
+   local name=$(git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
+   if [ "$name" ]; then
+      local mod=$(git status 2> /dev/null | grep "modified:" | grep -v untracked | wc -l)
+      local new=$(git status 2> /dev/null | grep "new file" | wc -l)
+      local del=$(git status 2> /dev/null | grep "deleted" | wc -l)
+      
+      echo -en $cyan
+      echo -en "$name"   #\xe2\x86\x92 "
+      #echo -en "$name "   #\xe2\x86\x92 "
+
+      echo -en $NC
+      echo -en '\xe2\x8a\xa2'
+      echo -en '\xe2\x8a\xa3'
+
+      echo -en $yellow
+      echo -en $mod
+      echo -en $new
+      echo -en $del
+      #echo -en "\xe2\x9d\x8d$mod "
+      #echo -en "\xe2\x9c\xb7$new "
+      #echo -en "\xe2\x9c\x9d$del"
+      
+      echo -en $NC
+   fi
+}
 ps1_format() {
+   echo -en '\xe2\x94\x8c'
+   #echo -en '\xe2\x94\x80'
+   echo -en '\x20'
+   echo -en $(_ps1_format_sys) 
+   echo -en '\n'
+   
+   local git=$(_ps1_format_git)
+   if [ "$git" ];then
+      echo -en '\xe2\x94\x82'
+      echo -en '\x20'
+      echo -en $git
+      echo -en '\n'
+   fi
+   
+   echo -en '\xe2\x94\x94'
+   #echo -en '\xe2\x94\x80'
+   echo -en '\xe2\x95\xbc '
+}
+
+ps1_format_2() {
+   echo -en '\xe2\x94\x8c'
+   #echo -en '\xe2\x94\x80'
+   #echo -en '\x20'
+   echo -en $(_ps1_format_sys) 
+   echo -en '\n'
+   
+   echo -en '\xe2\x94\x94'
+   #echo -en '\xe2\x94\x80'
+   local git=$(_ps1_format_git_2)
+   if [ "$git" ];then
+      #echo -en '\xe2\x94\x82'
+      #echo -en '\x20'
+      #echo -en '['
+      echo -en '\xe2\x8a\xa3'
+      echo -en $git
+      echo -en '\xe2\x8a\xa2'
+      #echo -en '\xe2\x94\x82'
+      #echo -en ']'
+      #echo -en '\x20'
+   else
+      echo -en '\xe2\x94\x80'
+      echo -en '\xe2\x94\x80'
+   fi
+   echo -en '\xe2\x95\xbc'
+   echo -en '\x20'
+}
+
+_ps1_format() {
    declare -a prefix=('\xe2\x94\x8c\xe2\x94\x80' '\xe2\x94\x82\xe2' '\xe2\x94\x94\xe2\x94\x80\xe2\x94\x80\xe2\x95\xbc\x20');
    echo -en "$GREEN"
    echo -en "${prefix[0]}"
