@@ -1,0 +1,6 @@
+#!/bin/bash
+
+alias git_get_branch_name="git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/'"
+alias git_get_count_mod="git status 2> /dev/null | grep 'modified:' | grep -v untracked | wc -l"
+alias git_get_count_new="git status 2> /dev/null | grep 'new file' | wc -l"
+alias git_get_count_del="git status 2> /dev/null | grep 'deleted' | wc -l"
