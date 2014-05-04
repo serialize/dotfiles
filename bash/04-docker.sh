@@ -9,8 +9,18 @@ alias doc-ranr="docker-container-remove-all-non-running"
 alias doi-mr="docker-image-most-recent"
 alias doi-ra="docker-image-remove-all"
 alias doi-ro="docker-image-remove-orphan"
-alias dor-i="docker run -i -t"
-alias dob="docker build -t"
+alias dor="docker-run"
+alias dob="docker-build"
+
+function docker-run() {
+	local $img=$1 $path=$2
+	docker run -i -t $img $path 
+}
+
+function docker-build() {
+	local $img=$1 $path=$2
+	docker build -t $img $path 
+}
 
 function docker-container-most-recent() {
     docker ps | grep -v ^CONTAINER | head -n1 | awk '{print $1}'
