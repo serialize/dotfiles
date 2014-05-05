@@ -1,16 +1,26 @@
 #!/bin/bash
 alias sskg="ssh-key-generate"
 alias sska="ssh-key-add"
+alias ssh="ssh-wrap"
 
 SSH_DIR=/home/$(whoami)/.ssh
 SSH_CFG_FILE="$SSH_DIR"/config
 SSH_KEY_PATTERN="$SSH_DIR"/.keys/id_
 
+function ssh-wrap() {
+	ssh-key-add $1
+	/usr/bin/ssh $1 
+}
+
+function _ssh-known-host-add() {
+	[[ "$SSH_KNOW_HOSTS" == "*$1*" ]] || exit 1
+	export SSH_KNOW_HOSTS="$SSH_KNOW_HOSTS$1 "  
+	exit 0
+}
+
 function ssh-key-add() {
-	local host=$1 key=$SSH_KEY$1 known=$SSH_KNOW_HOSTS
-	[[ -f $key ]] || exit 1
-	[[ "$known" == "*$1*" ]] && { ssh-add $key  && $known+="$host " } 
-	export SSH_KNOW_HOSTS=$known
+	[[ $(_ssh-known-host-add $1) ]] && ssh-add $SSH_KEY$1
+	exit 0
 }
 
 function ssh-key-generate() {
@@ -22,12 +32,13 @@ function ssh-key-generate() {
 	SSH_KEY+=$SSH_SETUP_ALIAS
 	SSH_LOGIN="$SSH_USER@$SSH_SERVER"
 	SSH_COMMENT="$(whoami)@$(hostname)_$(date -I)"
-   
+  
 	ssh-keygen -t rsa -b 4096 -C $comment -f $key
-	[[ $(read-input "Copy public key to remote host?" "yes") == "yes" ]] && ssh-copy-id -i $SSH_KEY -p $SSH_PORT $SSH_LOGIN
-	[[ $(read-input "Write config?" "yes") == "yes" ] && { echo "Writing config file." && $(_ssh_write_config) } 
-	[[ $(read-input "Add key to agent?" "yes") == "yes" ]] && ssh-add $SSH_KEY
-	[[ $(read-input "Remove public key?" "yes") == "yes" ] && { echo "Removing public key." && rm -f $SSH_KEY.pub }
+	[[ $(read-input "Copy public key to remote host?" "yes") == "yes" ]] && $(ssh-copy-id -i $SSH_KEY -p $SSH_PORT $SSH_LOGIN)
+	[[ $(read-input "Write config?" "yes") == "yes" ]] && $( echo "Writing config file." && $(_ssh_write_config) ) 
+	[[ $(read-input "Add key to agent?" "yes") == "yes" ]] && $(ssh-add $SSH_KEY)
+	[[ $(read-input "Remove public key?" "yes") == "yes" ]] && $(echo "Removing public key." && rm -f $SSH_KEY.pub)
+	exit 0
 }
 
 function _ssh_write_config() {
@@ -39,6 +50,8 @@ function _ssh_write_config() {
 	[[ -z "$SSH_KEY" ]] && lines+="IdentityFile $SSH_KEY"
 	
 	for line in lines; do 
-		{ [[ "$line" == "Host *" ]] && echo $line || echo "\t$line" } >> $SSH_CFG_FILE
+		[[ "$line" == "Host *" ]] && echo $line >> $SSH_CFG_FILE || echo "\t$line" >> $SSH_CFG_FILE
 	done  	
 }
+
+
