@@ -43,3 +43,8 @@ function mkcd () {
   cd "$1"
 }
 
+function list-symlinks() {
+	for file in *; do
+		[[ -h $file ]] && echo $file
+	done
+}

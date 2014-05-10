@@ -1,22 +1,33 @@
 #!/bin/bash
-############################
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # install-bash.sh
-# This script creates symlinks from the home directory to any desired dotfiles in ~/dotfiles
-############################
+# This script creates symlinks from the home directory 
+# to any desired dotfiles in ~/dotfiles
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 SCRIPTS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 TARGET_DIR=~/.bash                    
+function prepare() {
+	[[ -d $TARGET_DIR ]] || mkdir $TARGET_DIR
+}
 
-[[ -d $TARGET_DIR ]] || mkdir $TARGET_DIR
+function copy_files() {
+	local target= exists=
+   rm -f $TARGET_DIR/*
+	for file in $SCRIPTS_DIR/bash/*.sh; do
+		target="$TARGET_DIR/$(basename $file)"
+		target=${target%.sh}
+		ln -s $file $target 
+	   source $target
+	done
+}
 
-local target= exists=
-for file in $SCRIPTS_DIR/bash/*.sh; do
-#	target="$TARGET_DIR/$(basename $file)"
-    ln -s $file ${file%.sh}
-    source $target
-done
+function setup_bashrc() {
+	if [[ ! "$(grep 'source ~/.bash//*' ~/.bashrc)" ]]; then 
+	   echo -e "source ~/.bash/*" >> ~/.bashrc 
+   fi 
+}
 
-if [ ! "§(grep 'in ~/.bash//*' ~/.bashrc)"; then 
-then
-   echo "\nfor file in ~/.bash/*; do source $file done" >> ~/.bashrc 
-fi 
-
+prepare
+copy_files
+setup_bashrc

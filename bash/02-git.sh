@@ -11,10 +11,20 @@ alias giicd="git-info-count-deleted"
 alias giid="git-info-deleted"
 
 function git-parse-current-dir() {
-	export GIT_CURRENT_BRANCH=$(git-info-branch-name)
-	export GIT_CURRENT_COUNT_MOD=$(git-info-count-modified)
-	export GIT_CURRENT_COUNT_NEW=$(git-info-count-new)
-	export GIT_CURRENT_COUNT_DEL=$(git-info-count-deleted)
+   #echo -en "git-parse\n"
+   export TIMESTAMP=$(date)
+   
+   unset GIT_CURRENT_BRANCH
+   unset GIT_CURRENT_COUNT_MOD
+   unset GIT_CURRENT_COUNT_NEW
+   unset GIT_CURRENT_COUNT_DEL
+   local branch=
+   branch+=$(git-info-branch-name 2> /dev/null)
+   [[ "$branch" ]] || return 0
+   export GIT_CURRENT_BRANCH="$branch"
+   export GIT_CURRENT_COUNT_MOD=$(git-info-count-modified 2> /dev/null)
+   export GIT_CURRENT_COUNT_NEW=$(git-info-count-new 2> /dev/null)
+   export GIT_CURRENT_COUNT_DEL=$(git-info-count-deleted 2> /dev/null)
 }
 
 function git-push() {
@@ -30,26 +40,11 @@ function git-info-branch-name() {
 }
 
 function git-info-count-modified() {
-	echo -en $(git-info-modified | grep -v untracked | wc -l)
+	echo -en $(git status 2> /dev/null | grep 'modified:' | grep -v untracked | wc -l)
 }
-function git-info-modified() {
-	echo -en $(git status 2> /dev/null | grep 'modified:')
-}
-
 function git-info-count-new() {
-	echo -en $(git-info-new | wc -l)
+	echo -en $(git status 2> /dev/null | grep 'new file' | wc -l)
 }
-function git-info-new() {
-	echo -en $(git status 2> /dev/null | grep 'new file')
-}
-
 function git-info-count-deleted() {
-	echo -en $(git-info-deleted | wc -l)
+	echo -en $(git status 2> /dev/null | grep 'deleted' | wc -l)
 }
-function git-info-deleted() {
-	echo -en $(git status 2> /dev/null | grep 'deleted')
-}
-
-
-
-

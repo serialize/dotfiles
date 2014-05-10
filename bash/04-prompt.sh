@@ -1,254 +1,223 @@
 #!/bin/bash
-PS1_COLOR_FORE_FORMAT="38;5;"
-PS1_COLOR_BACK_FORMAT="48;5;"
-PS1_COLOR_DEFAULT="1;32"
-PS1_COLOR_RESET=" \e[0m"
-PS1_COLOR_LOGIN=( 15 238 )
-PS1_COLOR_PATH=( 15 241 )
-PS1_COLOR_GIT=( 15 244 )
-PS1_COLOR_GIT_OK=82
-PS1_COLOR_GIT_CHG=1
-PS1_SPACER="▶" #\u25B6" # ▶
-PS1_LOGIN="\u@\h"
-PS1_PATH="\w"
+PS_COLOR_FG=0
+PS_COLOR_BG=0
 
-actual_colors=()
+_encode_color() { 
+   echo -en "\[\033[$1m\]"
+}
+_color_reset() {
+	echo -en "\033[0m"
+}
+_color_fg() {
+   echo -en "\033[38;5;$1m"
+}
+_color_bg() {
+   echo -en "\033[48;5;$1m"
+}
+_color_fg_bg() {
+   echo -en "\033[38;5;$1;48;5;$2m"
+}
+_unicode_u() {
+   echo -en "\u$1"
+}
+_unicode_x() {
+   echo -en "\x$1\x$2\x$3"
+}
+_color() {
+   if [[ $1==0 ]];then
+      echo -en "$(_color_reset)"
+   elif [[ $1 > 0 ]] && [[ $2 > 0 ]];then
+      echo -en "$(_color_fg_bg '$1' '$2')"
+   elif [[ "$1" ]];then
+      echo -en "$(_color_fg '$1')"
+   fi
+}
+_prefix() {
+   echo -en "$(_color_reset)"
+   case "$1" in
+   "top")
+	   echo -en "$(_unicode_x e2 94 8c)"
+	   echo -en "$(_unicode_x e2 94 80)"
+	   ;;
+   "center")  
+      echo -en "$(_unicode_x e2 94 82)"
+	   echo -en " "
+	   ;;
+   "bottom")  
+      echo -en "$(_unicode_x e2 94 94)"
+	   echo -en "$(_unicode_x e2 94 80)"
+      echo -en "$(_unicode_x e2 95 bc)"
+	   ;;
+   esac
+   #echo -en " "
+}
+_separator() {
+   echo -en "$(_color_fg_bg '$1' '$2')"
+   echo -en "\u25b6"
+   [[ "$3" ]] && echo -en "$(_color_fg '$3')"
+}
 
+render_color() {
+   local fg=-1 bg=-1 
+   [[ "$1" ]] && [[ "$1" != "$PS_COLOR_FG" ]] && fg=$1
+   [[ "$2" ]] && [[ "$2" != "$PS_COLOR_BG" ]] && bg=$2
+   
+   [[ $fg < 0 && $bg < 0 ]] && return 0 
+   
+   [[ $fg == 0 || $fg > 0 ]] && export PS_COLOR_FG=$fg
+   [[ $bg == 0 || $bg > 0 ]] && export PS_COLOR_BG=$bg
+      
+   [[ $fg == 0 || $bg == 0 ]] && echo -en "\e[0m"
+   
+   local color=
+   [[ $fg > 0 && $bg > 0 ]] && color="38;5;$fg;48;5;$bg"
+   [[ $fg > 0 ]] && [[ $bg == 0 || $bg < 0 ]] && color="38;5;$fg" 
+   [[ $bg > 0 ]] && [[ $fg == 0 || $fg < 0 ]] && color="48;5;$bg" 
+            
+   if [[ "$color" ]];then
+      echo -en "$(printf '\e[%sm' $color)"
+   fi
+}
 
-_str_sep() { echo -en "▶" }
+render_content() {
+    local content=
+    content="$(render_color $2 $3)"
+    [[ "$1" ]] && content+="$1"
+    echo -en "$content"
+}
 
-_str_ws() { echo -en " " }
+render_prompt_1() {
+   
+   echo -en "$(_prefix 'top')"
 
-_str_nl() { echo -en "\n" }
+   echo -en "$(_color_fg_bg '15' '238') "
+   echo -en "\u@\h "
+   echo -en "$(_color_fg_bg '238' '241')"
+   echo -en "\u25b6"
+   echo -en "$(_color_fg '15') "
+   echo -en "\w "
+   
+   $(git-parse-current-dir)
+   if [[ "$GIT_CURRENT_BRANCH" ]]; then
+	   echo -en "$(_color_fg_bg '241' '244')"
+	   echo -en "\u25b6"
+	   echo -en "$(_color_fg '15') "
+      echo -en "$GIT_CURRENT_BRANCH "
+      echo -en "\u25b9 "
+      echo -en "$GIT_CURRENT_COUNT_MOD "
+      echo -en "$GIT_CURRENT_COUNT_NEW "
+	   echo -en "$GIT_CURRENT_COUNT_DEL "
+   fi
+   echo -en "\e[0m"
+   echo -en "\n"
+                     
+   echo -en "$(_prefix 'bottom') "
+}
 
-
-_append() { [[ "$1" ]] && cache+="$1" }
-
-_append_nl() { _append "$(_str_nl)" }
-
-_append_ws() { _append "$(_str_ws)" }
-
-_append_separator() { _append "$(_str_sep)" }
-
-_append_ws_left() { [[ "$1" ]] && _append "$(_mod_ws_left $1)" }
-
-_append_ws_right() { [[ "$1" ]] && _append "$(_mod_ws_right $1)" }
-
-_append_ws_wrap() { [[ "$1" ]] && _append "$(_mod_ws_wrap $1)" }
-
-_append_wrap() { [[ "$1" ]] && [[ "$2" ]] && [[ "$3" ]] && _append "$(_mod_wrap $@)" }
-
-_append_unicode() { [[ "$1" ]] && [[ "$2" ]] && [[ "$3" ]] && _append "$(_mod_unicode $@)" }
-
-_append_git_count() {
-	[[ "$1" ]] || return 1
-	local ok= chg=
-	ok=PS1_COLOR_GIT_OK
-	chg=PS1_COLOR_GIT_CHG
-	[[ $1 == 0 ]] && _set_colors $ok || _set_colors $chg
-	_append_ws_left $1 
+render_prompt_2_left() {
+   echo -en "$(render_content '\u2576' $1 $2)"
+   #echo -en "$(render_content '\u25c0' $1 $2)"
+}
+render_prompt_2_right() {
+   echo -en "$(render_content '\u2574' $1 $2)"
+   #echo -en "$(render_content '\u25b6' $1 $2)"
+}
+render_prompt_2_content() {
+   echo -en "$(render_prompt_2_right 46 $3) "
+   echo -en "$(render_content $1 $2 $3) "
+   echo -en "$(render_prompt_2_left 46 $3)"
+}
+render_prompt_2_counts() {
+   if [[ $1 > 0 ]];then
+      echo -en "$(render_content $1 197 244)"
+   else
+      echo -en "$(render_content $1 221 244)"
+   fi
+}
+render_prompt_2() {
+   echo -en "$(_prefix 'top')"
+   #echo -en "\u257c"
+   echo -en "$(render_prompt_2_content '\u@\h' 15 238)"
+   echo -en "$(render_prompt_2_content '\w' 75 241)"
+    
+   echo -en "$(git-parse-current-dir)"     
+   #echo -en "$(git-parse-current-dir)"
+   if [[ "$GIT_CURRENT_BRANCH" ]]; then
+      local git=""
+      echo -en "$(render_prompt_2_right 46 244)"
+      echo -en " $(render_content $GIT_CURRENT_BRANCH 221 244)"
+      echo -en " $(render_content '\u2964' 221 244)"
+      echo -en " $(render_prompt_2_counts $GIT_CURRENT_COUNT_MOD)"
+      echo -en " $(render_prompt_2_counts $GIT_CURRENT_COUNT_NEW)"
+      echo -en " $(render_prompt_2_counts $GIT_CURRENT_COUNT_DEL) "
+      
+      #echo -en "$(render_prompt_2_left 46 $3)"
+   fi
+   echo -en "$(_color_reset)"
+   echo -en "\n" #"$(render_prompt_2_right 46)\n"
+   echo -en "$(_prefix 'bottom') "
 }
 
 
-_mod_ws_left() { [[ "$1" ]] && echo -en "$(_str_ws)$1" }
 
-_mod_ws_right() { [[ "$1" ]] && echo -en "$1$(_str_ws)" }
+render_prompt_old_1() {
 
-_mod_ws_wrap() { [[ "$1" ]] && echo -en "$(_str_ws)$1$(_str_ws)" }
+#-----------------------------------
+#  colors
+#-----------------------------------
+	red='\e[0;31m'
+	RED='\e[1;31m'
+	blue='\e[0;34m'
+	BLUE='\e[1;34m'
+	cyan='\e[0;36m'
+	CYAN='\e[1;36m'
+	NC='\e[0m'      # no color
+	black='\e[0;30m'
+	BLACK='\e[1;30m'
+	green='\e[0;32m'
+	GREEN='\e[1;32m'
+	yellow='\e[0;33m'
+	YELLOW='\e[1;33m'
+	magenta='\e[0;35m'
+	MAGENTA='\e[1;35m'
+   #white='\e[0;37m'
+	white='\e[0;37m'
+	WHITE='\e[1;37m'
+   #-----------------------------------
+   #  symbols
+   #-----------------------------------
+	SYM_1='\xe2\x94\x8c' # ┌
+	SYM_2='\xe2\x94\x80' # ─
+	SYM_3='\xe2\x94\x94' # └
+	SYM_4='\xe2\x8a\xa2' # ⊢
+	SYM_5='\xe2\x8a\xa3' # ⊣
+	SYM_7='\xe2\x95\xbc' # ╼
+	SYM_8='\xe2\x8a\x8f' # ⊏
+	SYM_9='\xe2\x8a\x90' # ⊐
+	SYM_10='\xe2\x8a\x82' # ⊂
+	SYM_11='\xe2\x8a\x83' # ⊃
+	SYM_12='\xe2\x94\x9c' # ├
+	SYM_13='\xe2\x94\xa4' # ┤
+	SYM_14='\xe2\x94\x82' # │
+   
+   echo -e $SYM_1$SYM_2
+   echo -en "$white\u@\h$NC"
+   echo -en "$blue\w$NC"
+   echo -en $SYM_3
 
-_mod_wrap() { [[ "$1" ]] && && [[ "$2" ]] && [[ "$3" ]] && echo -en "$2""$1""$3" }
-
-_mod_unicode() { [[ "$1" ]] && [[ "$2" ]] && [[ "$3" ]] && echo -en "\x$1\x$2\x$3" }
-
-
-function ps1_prompt() {
-	PS1=""
-	
-	git-parse-current-dir
-	
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	# build blocks
-	_build_login
-	login_block=_flush_cache
-	
-	_build_path
-	path_block=_flush_cache	
-	
-	_build_git
-	git_block=_flush_cache
-	
-	_build_debug
-	debug_block=flush_cache
-	
-	local litop= limid= libot=
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	# build first line from blocks
-	_build_line_prefix 1
-	_append $login_block
-	_append $path_block
-	
-	if [[ "$git_block" ]]; then
-		_append $path_block
-	fi
-	litop=flush_cache
-	
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	# build debug line if exists  
-	if [[ "$debug_block" ]]; then
-		_append_nl
-		_build_line_prefix 2
-		_append	$debug_block		
-	fi
-	limid=flush_cache
-				
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	# build debug line if exists  
-	_append_nl
-	_build_line_prefix 3
-	_clear_colors
-	_append_ws
-	libot=flush_cache
-		
-	[[ "$litop" ]] && PS1+="$litop"
-	[[ "$limid" ]] && PS1+="$limid"
-	[[ "$libot" ]] && PS1+="$libot"
-				
+   local gitbranch="$(git_get_branch_name)"
+   if [ "$gitbranch" ]; then
+      local gitcounts="$(git_get_count_mod)"
+      gitcounts+="$(git_get_count_new)"
+      gitcounts+="$(git_get_count_del)"
+      echo -en $SYM_2$SYM_2[
+      echo -en "$yellow$gitbranch$NC"
+      echo -en "-"
+      echo -en "$yellow$gitcounts$NC"
+      echo -en ]$SYM_2
+   else
+      echo -en $SYM_2$SYM_2$SYM_2
+   fi   
+      
+   echo -en $SYM_7"\x20"
 }
-
-function ps1_prompt_old() {
-	PS1_GIT="$(_ps1_format_git) "
-	PS1+=$(echo -en "\xe2\x94\x8c")
-	PS1+=$(echo -en "\xe2\x94\x80")
-	
-	PS1+=$(ps1_render_color ${PS1_COLOR_LOGIN[0]} ${PS1_COLOR_LOGIN[1]})
-	PS1+=" $PS1_LOGIN " 
-	PS1+=$(ps1_render_color ${PS1_COLOR_LOGIN[1]} ${PS1_COLOR_PATH[1]})
-	PS1+="$PS1_SPACER"
-	
-	PS1+=$(ps1_render_color ${PS1_COLOR_PATH[0]} ${PS1_COLOR_PATH[1]})
-	PS1+=" $PS1_PATH "
-	PS1+=$(ps1_render_color ${PS1_COLOR_PATH[1]} ${PS1_COLOR_GIT[1]})
-	PS1+="$PS1_SPACER"
-		
-	PS1+=$(ps1_render_color ${PS1_COLOR_GIT[0]} ${PS1_COLOR_GIT[1]})
-	PS1+=" $PS1_GIT "
-	PS1+="\033[0m "
-	#PS1+=$(echo -en "\xe2\x94\x80")
-	#PS1+=$(echo -en "\xe2\x95\xbc")
-	PS1+="\n"
-
-	PS1+=$(echo -en "\xe2\x94\x94")
-	PS1+=$(echo -en "\xe2\x94\x80")
-	PS1+=$(echo -en "\xe2\x95\xbc")
-	PS1+=" "
-}
-
-_set_fg_color() {
-	[[ "$1" ]] || return 1
-	local fg= 
-	if [[ "$1" != "${actual_colors[0]}" ]]; then
-		fg="$1"
-	fi
-}
-
-_check_color() {
-	[[ "$1" ]] && [[ "$2" ]] || return 1
-	[[ $1 != ${actual_colors[$2]} ]] || return 1
-	return 0
-}
-
-_set_colors() {
-	[[ "$1" ]] || return 1
-	local fg= bg= color=
-
-	[[ _check_color $1 0 ]] || fg="$1"
-	[[ _check_color $2 1 ]] || bg="$2"
-	
-	#if [[ "$fg" ]] && [[ "$bg" ]];then
-	if [[ "$fg" && "$bg" ]];then
-		color="38;5;$fg;48;5;$bg"
-		actual_colors[0]="$fg"
-		actual_colors[1]="$bg"
-	elif [[ "$fg" ]];then
-		color="38;5;$fg"
-		actual_colors[0]="$fg"
-	elif [[ "$bg" ]];then
-		color="48;5;$bg"
-		actual_colors[1]="$bg"
-	fi
-	
-	if [[ "$color"]];then
-		_append_wrap $color "\033[" "m"	
-	fi
-}
-_clear_colors() {
-	actual_colors=()
-	_append "\033[0m"	
-}
-_push_bg_color() {
-	local fg= bg= 
-	[[ ${actual_colors[1]} ]] && fg=${actual_colors[1]}
-	[[ "$1" ]] && bg="$1"
-	_set_color "$fg" "$bg"
-}
-
-
-_render() { 
-	if [[ "$cache" ]];then 
-		PS1+="$cache"
-		cache= 
-	fi
-}
-
-_flush_cache() {
-	echo -en "$cache"
-	cache=
-	unset $cache
-}
-
-_build_line_prefix() {
-	case "$1" in
-		1) 	_append_unicode e2 94 8c
-			_append_unicode e2 94 80
-			#_append_ws
-	    ;;
-		2) 	_append_unicode e2 94 82
-			_append_ws
-			_append "[DEBUG]"
-			_append_ws
-	    	    ;;
-		3) 	_append_unicode e2 94 94
-			_append_unicode e2 94 80
-			_append_unicode e2 95 bc
-			_append_ws
-	    ;;
-	esac
-}
-
-
-_build_login() {
-	_set_colors 15 238
-	_append_ws_wrap "\u@\h"
-}
-
-_build_path() {
-	_push_bg_color 244
-	_append_separator
-	_set_fg_color 15
-	_append_ws_wrap "\w"
-}
-
-_build_git() {
-	[[ "$GIT_CURRENT_BRANCH" ]] || return 1
-	_push_bg_color 244
-	_append_separator
-	_set_fg_color 15
-	_append_ws_wrap $GIT_CURRENT_BRANCH
-	_append "-"
-	_append_git_count $GIT_CURRENT_COUNT_MOD
-	_append_git_count $GIT_CURRENT_COUNT_NEW
-	_append_git_count $GIT_CURRENT_COUNT_DEL
-	_set_fg_color 15
-	_append_ws
-}
-PROMPT_COMMAND=ps1_prompt

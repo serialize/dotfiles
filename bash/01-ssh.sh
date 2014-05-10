@@ -6,21 +6,31 @@ alias ssh="ssh-wrap"
 SSH_DIR=/home/$(whoami)/.ssh
 SSH_CFG_FILE="$SSH_DIR"/config
 SSH_KEY_PATTERN="$SSH_DIR"/.keys/id_
+export SSH_KNOWN_HOSTS=""
 
 function ssh-wrap() {
-	ssh-key-add $1
-	/usr/bin/ssh $1 
+	echo "$(ssh-key-add $1)"
+	echo "---$(env | grep SSH)"
+	/usr/bin/ssh "$1" 
 }
 
 function _ssh-known-host-add() {
-	[[ "$SSH_KNOW_HOSTS" == "*$1*" ]] || exit 1
-	export SSH_KNOW_HOSTS="$SSH_KNOW_HOSTS$1 "  
-	exit 0
+   local newhost=$1
+	[[ $SSH_KNOWN_HOSTS =~ "$newhost" ]] || export SSH_KNOWN_HOSTS+="$newhost "  
 }
 
 function ssh-key-add() {
-	[[ $(_ssh-known-host-add $1) ]] && ssh-add $SSH_KEY$1
-	exit 0
+   local newhost=$1
+   if [[ $SSH_KNOWN_HOSTS =~ "$newhost" ]]; then
+      echo "host exists" 
+      return 0
+   else 
+      echo "host exists not, adding"
+      known="$SSH_KNOWN_HOSTS$newhost "
+      unset SSH_KNOWN_HOSTS
+	   export SSH_KNOWN_HOSTS=$known
+	   ssh-add $SSH_KEY_PATTERN$newhost   
+   fi
 }
 
 function ssh-key-generate() {
@@ -38,7 +48,7 @@ function ssh-key-generate() {
 	[[ $(read-input "Write config?" "yes") == "yes" ]] && $( echo "Writing config file." && $(_ssh_write_config) ) 
 	[[ $(read-input "Add key to agent?" "yes") == "yes" ]] && $(ssh-add $SSH_KEY)
 	[[ $(read-input "Remove public key?" "yes") == "yes" ]] && $(echo "Removing public key." && rm -f $SSH_KEY.pub)
-	exit 0
+	return 0
 }
 
 function _ssh_write_config() {
