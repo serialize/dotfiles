@@ -3,25 +3,25 @@ PS_COLOR_FG=0
 PS_COLOR_BG=0
 
 _encode_color() { 
-   echo -en "\[\033[$1m\]"
+   echo -en "\[\e[$1m\]"
 }
 _color_reset() {
-	echo -en "\033[0m"
+	echo -en "\[\e[0m\]"
 }
 _color_fg() {
-   echo -en "\033[38;5;$1m"
+   echo -en "\[\e[38;5;$1m\]"
 }
 _color_bg() {
-   echo -en "\033[48;5;$1m"
+   echo -en "\[\e[48;5;$1m\]"
 }
 _color_fg_bg() {
-   echo -en "\033[38;5;$1;48;5;$2m"
+   echo -en "\[\e[38;5;$1;48;5;$2m\]"
 }
 _unicode_u() {
-   echo -en "\u$1"
+   echo -en "\[\u$1\]"
 }
 _unicode_x() {
-   echo -en "\x$1\x$2\x$3"
+   echo -en "\[\x$1\x$2\x$3\]"
 }
 _color() {
    if [[ $1==0 ]];then
@@ -36,24 +36,26 @@ _prefix() {
    echo -en "$(_color_reset)"
    case "$1" in
    "top")
-	   echo -en "$(_unicode_x e2 94 8c)"
-	   echo -en "$(_unicode_x e2 94 80)"
+      echo -en " $(_unicode_u 257E)"
+	   #echo -en "$(_unicode_x e2 94 8c)"
+	   #echo -en "$(_unicode_x e2 94 80)"
 	   ;;
    "center")  
       echo -en "$(_unicode_x e2 94 82)"
 	   echo -en " "
 	   ;;
    "bottom")  
-      echo -en "$(_unicode_x e2 94 94)"
-	   echo -en "$(_unicode_x e2 94 80)"
-      echo -en "$(_unicode_x e2 95 bc)"
+      #echo -en "$(_unicode_x e2 94 94)"
+      #echo -en "$(_unicode_x e2 94 80)"
+      #echo -en "$(_unicode_x e2 95 bc)"
+      #echo -en "$(_unicode_u 2579)"
 	   ;;
    esac
    #echo -en " "
 }
 _separator() {
    echo -en "$(_color_fg_bg '$1' '$2')"
-   echo -en "\u25b6"
+   echo -en "\[\u25b6\]"
    [[ "$3" ]] && echo -en "$(_color_fg '$3')"
 }
 
@@ -67,7 +69,7 @@ render_color() {
    [[ $fg == 0 || $fg > 0 ]] && export PS_COLOR_FG=$fg
    [[ $bg == 0 || $bg > 0 ]] && export PS_COLOR_BG=$bg
       
-   [[ $fg == 0 || $bg == 0 ]] && echo -en "\e[0m"
+   [[ $fg == 0 || $bg == 0 ]] && echo -en "\[\e[0m\]"
    
    local color=
    [[ $fg > 0 && $bg > 0 ]] && color="38;5;$fg;48;5;$bg"
@@ -75,7 +77,7 @@ render_color() {
    [[ $bg > 0 ]] && [[ $fg == 0 || $fg < 0 ]] && color="48;5;$bg" 
             
    if [[ "$color" ]];then
-      echo -en "$(printf '\e[%sm' $color)"
+      echo -en "$(printf '\[\e[%sm\]' $color)"
    fi
 }
 
@@ -93,7 +95,7 @@ render_prompt_1() {
    echo -en "$(_color_fg_bg '15' '238') "
    echo -en "\u@\h "
    echo -en "$(_color_fg_bg '238' '241')"
-   echo -en "\u25b6"
+   echo -en "\[\u25b6\]"
    echo -en "$(_color_fg '15') "
    echo -en "\w "
    
@@ -108,18 +110,18 @@ render_prompt_1() {
       echo -en "$GIT_CURRENT_COUNT_NEW "
 	   echo -en "$GIT_CURRENT_COUNT_DEL "
    fi
-   echo -en "\e[0m"
+   echo -en "\[\e[0m\]"
    echo -en "\n"
                      
    echo -en "$(_prefix 'bottom') "
 }
 
 render_prompt_2_left() {
-   echo -en "$(render_content '\u2576' $1 $2)"
+   echo -en "$(render_content '\[\u2576\]' $1 $2)"
    #echo -en "$(render_content '\u25c0' $1 $2)"
 }
 render_prompt_2_right() {
-   echo -en "$(render_content '\u2574' $1 $2)"
+   echo -en "$(render_content '\[\u2574\]' $1 $2)"
    #echo -en "$(render_content '\u25b6' $1 $2)"
 }
 render_prompt_2_content() {
@@ -134,28 +136,36 @@ render_prompt_2_counts() {
       echo -en "$(render_content $1 221 244)"
    fi
 }
+render_prompt_spacer() {
+   echo -en "$(_color_reset)"
+   echo -en "$(_unicode_x e2 94 80)"
+}
+
 render_prompt_2() {
    echo -en "$(_prefix 'top')"
-   #echo -en "\u257c"
+   
+   echo -en "$(render_prompt_spacer)"
    echo -en "$(render_prompt_2_content '\u@\h' 15 238)"
+
+   #echo -en "$(render_prompt_spacer)"
    echo -en "$(render_prompt_2_content '\w' 75 241)"
     
    echo -en "$(git-parse-current-dir)"     
-   #echo -en "$(git-parse-current-dir)"
    if [[ "$GIT_CURRENT_BRANCH" ]]; then
       local git=""
+      #echo -en "$(render_prompt_spacer)"
       echo -en "$(render_prompt_2_right 46 244)"
       echo -en " $(render_content $GIT_CURRENT_BRANCH 221 244)"
-      echo -en " $(render_content '\u2964' 221 244)"
+      echo -en " $(render_content '\[\u2964\]' 221 244)"
       echo -en " $(render_prompt_2_counts $GIT_CURRENT_COUNT_MOD)"
       echo -en " $(render_prompt_2_counts $GIT_CURRENT_COUNT_NEW)"
-      echo -en " $(render_prompt_2_counts $GIT_CURRENT_COUNT_DEL) "
-      
-      #echo -en "$(render_prompt_2_left 46 $3)"
+      echo -en " $(render_prompt_2_counts $GIT_CURRENT_COUNT_DEL)"
+      echo -en " $(render_prompt_2_left 46 244)"
    fi
-   echo -en "$(_color_reset)"
-   echo -en "\n" #"$(render_prompt_2_right 46)\n"
-   echo -en "$(_prefix 'bottom') "
+   echo -en "$(render_prompt_spacer)"
+   echo -e "$(_unicode_u 257C)"
+   #echo -en "\n" 
+   echo -en "$(_prefix 'bottom') " #\[\007\]"
 }
 
 
