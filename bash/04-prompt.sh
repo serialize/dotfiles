@@ -36,7 +36,7 @@ _prefix() {
    echo -en "$(_color_reset)"
    case "$1" in
    "top")
-      echo -en " $(_unicode_u 257E)"
+      echo -en "┌" #$(_unicode_u 257E)"
 	   #echo -en "$(_unicode_x e2 94 8c)"
 	   #echo -en "$(_unicode_x e2 94 80)"
 	   ;;
@@ -49,6 +49,7 @@ _prefix() {
       #echo -en "$(_unicode_x e2 94 80)"
       #echo -en "$(_unicode_x e2 95 bc)"
       #echo -en "$(_unicode_u 2579)"
+      echo -en "└╼"
 	   ;;
    esac
    #echo -en " "
