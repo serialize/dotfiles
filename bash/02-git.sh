@@ -19,12 +19,12 @@ function git-parse-current-dir() {
    unset GIT_CURRENT_COUNT_NEW
    unset GIT_CURRENT_COUNT_DEL
    local branch=
-   branch+=$(git-info-branch-name 2> /dev/null)
+   branch+=$(git-status-branch-name 2> /dev/null)
    [[ "$branch" ]] || return 0
    export GIT_CURRENT_BRANCH="$branch"
-   export GIT_CURRENT_COUNT_MOD=$(git-info-count-modified 2> /dev/null)
-   export GIT_CURRENT_COUNT_NEW=$(git-info-count-new 2> /dev/null)
-   export GIT_CURRENT_COUNT_DEL=$(git-info-count-deleted 2> /dev/null)
+   export GIT_CURRENT_COUNT_MOD=$(git-status-count-modified 2> /dev/null)
+   export GIT_CURRENT_COUNT_NEW=$(git-status-count-new 2> /dev/null)
+   export GIT_CURRENT_COUNT_DEL=$(git-status-count-deleted 2> /dev/null)
 }
 
 function git-push() {
@@ -35,16 +35,32 @@ function git-push() {
 	git pull
 }
 
-function git-info-branch-name() {
+function git-status-branch-name() {
 	echo -en $(git branch --no-color 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/\1/')
 }
 
-function git-info-count-modified() {
+function git-status-count-modified() {
 	echo -en $(git status 2> /dev/null | grep 'modified:' | grep -v untracked | wc -l)
 }
-function git-info-count-new() {
+function git-status-count-new() {
 	echo -en $(git status 2> /dev/null | grep 'new file' | wc -l)
 }
-function git-info-count-deleted() {
+function git-status-count-deleted() {
 	echo -en $(git status 2> /dev/null | grep 'deleted' | wc -l)
 }
+export git_unt=0
+
+function git-status-counts() {
+   local status=$(git status -s 2> /dev/null) mod=0 new=0 del=0 unt=0
+   echo "$status" | while read line; do
+      local ident=${line:0:2} left=${line:0:1}  right=${line:1:1}
+      if [[ ${line:1:1}=="M" ]];then
+         echo "$ident $left $right"
+         ((unt+=1)) 
+         echo "unt: $unt"
+      fi
+   done
+   export git_unt="$unt"
+   echo "untracked: $git_unt $unt"
+}
+

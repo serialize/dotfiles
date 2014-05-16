@@ -169,8 +169,6 @@ render_prompt_2() {
    echo -en "$(_prefix 'bottom') " #\[\007\]"
 }
 
-
-
 render_prompt_old_1() {
 
 #-----------------------------------
